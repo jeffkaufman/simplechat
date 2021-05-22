@@ -1,37 +1,41 @@
 import time
 import curses
 import curses.ascii
+import json
+import urllib.request
+import textwrap
 
 class Display:
-  def __init__(self):
-    self.main = curses.newwin(curses.LINES-3, curses.COLS, 0, 0)
-    self.divider = curses.newwin(1, curses.COLS, curses.LINES-2, 0)
-    self.entry = curses.newwin(1, curses.COLS, curses.LINES-1, 0)
+  def __init__(self, stdscr):
+    self.stdscr = stdscr
+    self.main_height = curses.LINES-2
+    self.divider_row = curses.LINES-2
+    self.entry_row = curses.LINES-1
     self.composition = []
-    
-    self.entry.nodelay(True)
-    
-    self.divider.addstr("-"*(curses.COLS-1))
-    self.main.addstr("hello world");
+    self.cursor_pos = 0
+    self.messages = []
 
-    self.refresh()
+    self.stdscr.nodelay(True)
+    self.stdscr.insstr(self.divider_row, 0, "-"*(curses.COLS))
+    self.fix_cursor()
 
-  def refresh(self):
-    for win in [self.main, self.divider, self.entry]:
-      win.refresh()
+  def write_line(self, row, message):
+    self.stdscr.addstr(row, 0, message)
+    self.stdscr.clrtoeol()
+    self.fix_cursor()
 
   def set_entry(self, composition):
     composition = "".join(composition)
-    cursor_pos = len(composition)
+    self.cursor_pos = len(composition)
     # trim to screen width
     if len(composition) > curses.COLS-1:
-      composition = composition[-(curses.COLS-1) : -1]
-      cursor_pos = curses.COLS-1
-    # pad if too short
-    composition = composition.ljust(curses.COLS-1, ' ')
-    self.entry.addstr(0, 0, composition)
-    self.entry.move(0, cursor_pos)
-    self.entry.refresh()
+      composition = composition[-(curses.COLS-1):]
+      self.cursor_pos = curses.COLS-1
+    self.write_line(self.entry_row, composition)
+
+  def fix_cursor(self):
+    self.stdscr.move(self.entry_row, self.cursor_pos)
+    self.stdscr.refresh()
 
   def handle_ch(self, ch):
     output = None
@@ -39,19 +43,42 @@ class Display:
       self.composition.append(chr(ch))
     elif ch in [curses.KEY_BACKSPACE, curses.KEY_DC, curses.ascii.DEL]:
       if self.composition:
-        self.composition.pop(-1)
+        self.composition.pop()
     elif ch == curses.ascii.LF:
       output = "".join(self.composition)
       self.composition = []
     self.set_entry(self.composition)
     return output
-     
+
+  def update_main(self):
+    lines = []
+    for message in self.messages:
+      lines.extend(textwrap.wrap(message, width=curses.COLS))
+    if len(lines) > self.main_height:
+      lines = lines[-self.main_height:]
+
+    for row, line in enumerate(lines):
+      self.write_line(row, line)
+
+  def record_sent(self, message):
+    self.messages.append(message)
+    self.update_main()
+
+def send_message(hook, message):
+  payload = json.dumps({
+    "text": message,
+  }).encode("utf-8")
+  req = urllib.request.Request(hook, data=payload, headers={
+    "Content-type": "application/json",
+  })
+  resp = urllib.request.urlopen(req)
+
 def setup(stdscr):
   curses.noecho()
   curses.cbreak()
   stdscr.keypad(True)
 
-  return Display()
+  return Display(stdscr)
 
 def cleanup(stdscr):
   curses.nocbreak()
@@ -60,19 +87,21 @@ def cleanup(stdscr):
   curses.endwin()
 
 def start(stdscr):
+  with open("secrets.json") as inf:
+    secrets = json.loads(inf.read())
+    hook = secrets["slack"]["hook"]
+
   display = setup(stdscr)
   while True:
-    ch = display.entry.getch()
+    ch = stdscr.getch()
     if ch == curses.ERR:
       time.sleep(0.01)
       continue
 
     output = display.handle_ch(ch)
-    if output != None:
-      pass
-      # add output to display
-      # send output on net
-      
+    if output:
+      send_message(hook, output)
+      display.record_sent(output)
 
 if __name__ == "__main__":
   stdscr = curses.initscr()
