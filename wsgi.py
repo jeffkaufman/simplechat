@@ -1,6 +1,15 @@
 import sys
 import traceback
 import json
+import os
+
+with open(os.path.join(os.path.dirname(__file__), "secrets.json")) as inf:
+  secrets = json.loads(inf.read())
+  slack_token = secrets["slack"]["token"]
+  simplechat_token = secrets["simplechat"]["token"]
+  users = secrets["slack"]["users"]
+
+pending_messages = []
 
 def ok(msg="ok"):
   return "200 OK", [("Content-Type", "text/plain")], msg
@@ -13,13 +22,24 @@ def handle_request(environ, start_response):
 
   with open("/tmp/slack.txt", "w") as outf:
     outf.write(json.dumps(post_json))
+    outf.write("\n")
 
   if msgtype == "url_verification":
     return ok(post_json["challenge"])
-  elif msgtype == "event_callback" and post_json["event"]["type"] == "message":
+  elif (msgtype == "event_callback" and
+        post_json["event"]["type"] == "message" and
+        post_json["token"] == slack_token):
     text = post_json["event"]["text"]
-    # todo: send this to simplechat. long poll?
+    userid = post_json["event"]["user"]
+    username = users.get(userid, userid)
+    pending_messages.append("%s: %s" % (username, text))
     return ok()
+  elif msgtype == "get_messages" and post_json["token"] == simplechat_token:
+    ret = json.dumps(pending_messages)
+    pending_messages.clear()
+    return ok(ret)
+  else:
+    return ok("unknown")
 
 def die500(start_response, e):
     trb = traceback.format_exc().encode("utf-8")
