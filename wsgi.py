@@ -3,11 +3,13 @@ import traceback
 import json
 import os
 
-with open(os.path.join(os.path.dirname(__file__), "secrets-server.json")) as inf:
-  secrets = json.loads(inf.read())
+if os.path.dirname(__file__):
+  os.chdir(os.path.dirname(__file__))
+
+with open("secrets-server.json") as inf:
+  secrets = json.load(inf)
   slack_token = secrets["slack"]["token"]
   simplechat_token = secrets["simplechat"]["token"]
-  users = secrets["slack"]["users"]
 
 pending_messages = []
 
@@ -15,8 +17,8 @@ def ok(msg="ok"):
   return "200 OK", [("Content-Type", "text/plain")], msg
 
 def get_name(userid):
-  with open(os.path.join(os.path.dirname(__file__), "users.json")) as inf:
-    return json.load(inf.read()).get(userid, userid)
+  with open("users.json") as inf:
+    return json.load(inf).get(userid, userid)
 
 def handle_request(environ, start_response):
   content_length = int(environ.get('CONTENT_LENGTH', 0))
