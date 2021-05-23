@@ -14,6 +14,10 @@ pending_messages = []
 def ok(msg="ok"):
   return "200 OK", [("Content-Type", "text/plain")], msg
 
+def get_name(userid):
+  with open(os.path.join(os.path.dirname(__file__), "users.json")) as inf:
+    return json.load(inf.read()).get(userid, userid)
+
 def handle_request(environ, start_response):
   content_length = int(environ.get('CONTENT_LENGTH', 0))
   post_raw = environ['wsgi.input'].read(content_length)
@@ -31,7 +35,7 @@ def handle_request(environ, start_response):
         post_json["token"] == slack_token):
     text = post_json["event"]["text"]
     userid = post_json["event"]["user"]
-    username = users.get(userid, userid)
+    username = get_name(userid)
     pending_messages.append("%s: %s" % (username, text))
     return ok()
   elif msgtype == "get_messages" and post_json["token"] == simplechat_token:

@@ -63,13 +63,15 @@ sudo service uwsgi-simplechat start
 {
   "slack": {
     "token": "token slack sends on messages, so you can tell it's real",
-    "users": {
-      "U1234": "friendly name here"
-    }
   },
   "simplechat": {
     "token": "generate a token shared between client and server",
   }
 }
-
 ```
+
+#### `users.json`
+
+"users": {
+  "U1234": "friendly name here"
+}
