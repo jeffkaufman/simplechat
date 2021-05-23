@@ -9,7 +9,8 @@ if os.path.dirname(__file__):
 
 Client = namedtuple(
   "Client",
-  ["slack_token",
+  ["name",
+   "slack_token",
    "simplechat_token",
    "pending_messages"])
 
@@ -17,8 +18,13 @@ clients_by_slack_token = {}
 clients_by_simplechat_token = {}
 for client_name in os.listdir("secrets"):
   with open(os.path.join("secrets", client_name))as inf:
-    secrets = json.load(inf)
+    try:
+      secrets = json.load(inf)
+    except json.decoder.JSONDecodeError as e:
+      raise RuntimeError("unable to decode %s" % client_name, e)
+
     client = Client(
+      name=client_name.split(".")[0],
       slack_token=secrets["slack"]["token"],
       simplechat_token=secrets["simplechat"]["token"],
       pending_messages=[])
@@ -30,7 +36,10 @@ def ok(msg="ok"):
 
 def get_name(userid):
   with open("users.json") as inf:
-    return json.load(inf).get(userid, userid)
+    try:
+      return json.load(inf).get(userid, userid)
+    except json.decoder.JSONDecodeError as e:
+      raise RuntimeError("unable to decode users.json", e)
 
 def handle_request(environ, start_response):
   content_length = int(environ.get('CONTENT_LENGTH', 0))
@@ -38,20 +47,23 @@ def handle_request(environ, start_response):
   post_json = json.loads(post_raw)
   msgtype = post_json["type"]
 
-  with open("/tmp/slack.txt", "w") as outf:
-    outf.write(json.dumps(post_json))
-    outf.write("\n")
-
   if msgtype == "url_verification":
     return ok(post_json["challenge"])
   elif (msgtype == "event_callback" and
         post_json["event"]["type"] == "message"):
+    with open("/tmp/slack.txt", "w") as outf:
+      outf.write(json.dumps(post_json))
+      outf.write("\n")
+
     client = clients_by_slack_token.get(post_json["token"], None)
     if client:
       text = post_json["event"]["text"]
-      userid = post_json["event"]["user"]
+      userid = post_json["event"].get("user", None)
+      if not userid:
+        userid = post_json["event"]["bot_id"]
       username = get_name(userid)
-      client.pending_messages.append("%s: %s" % (username, text))
+      for recipient in clients_by_slack_token.values():
+        recipient.pending_messages.append("%s: %s" % (username, text))
       return ok()
   elif msgtype == "get_messages":
     client = clients_by_simplechat_token.get(post_json["token"], None)

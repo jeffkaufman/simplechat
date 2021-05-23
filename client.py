@@ -5,11 +5,16 @@ import json
 import urllib.request
 import textwrap
 import os
+import sys
 
 if os.path.dirname(__file__):
   os.chdir(os.path.dirname(__file__))
 
-with open("secrets-client.json") as inf:
+secret_fname = "secrets-client.json"
+if len(sys.argv) == 2:
+  secret_fname = sys.argv[1]
+
+with open(secret_fname) as inf:
   secrets = json.load(inf)
   hook = secrets["slack"]["hook"]
   simplechat_token = secrets["simplechat"]["token"]
@@ -143,7 +148,7 @@ def start(stdscr):
     output = display.handle_ch(ch)
     if output:
       send_message(output)
-      display.record_sent(output)
+      # goes via server instead display.record_sent(output)
 
 if __name__ == "__main__":
   stdscr = curses.initscr()
