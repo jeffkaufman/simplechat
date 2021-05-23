@@ -5,7 +5,26 @@ individual room from the command line.
 
 ## Configuration
 
-### Nginx
+### Client
+
+#### `secrets-client.json`
+
+```
+{
+  "slack": {
+    "hook": "https://hooks.slack.com/services/TBD",
+  },
+  "simplechat": {
+    "token": "generate a token shared between client and server",
+    "url": "your deployment url"
+  }
+}
+
+```
+
+### Server
+
+#### Nginx
 
 ```
 location /simplechat {
@@ -14,7 +33,7 @@ location /simplechat {
 }
 ```
 
-### `/etc/systemd/system/uwsgi-simplechat.service`
+#### `/etc/systemd/system/uwsgi-simplechat.service`
 
 ```
 [Unit]
@@ -38,20 +57,18 @@ sudo systemctl enable uwsgi-simplechat
 sudo service uwsgi-simplechat start
 ```
 
-### `secrets.json`
+#### `secrets-server.json`
 
 ```
 {
   "slack": {
     "token": "token slack sends on messages, so you can tell it's real",
-    "hook": "https://hooks.slack.com/services/TBD",
     "users": {
       "U1234": "friendly name here"
     }
   },
   "simplechat": {
-    "token": "generate a token",
-    "url": "your deployment url"
+    "token": "generate a token shared between client and server",
   }
 }
 

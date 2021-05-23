@@ -3,7 +3,7 @@ import traceback
 import json
 import os
 
-with open(os.path.join(os.path.dirname(__file__), "secrets.json")) as inf:
+with open(os.path.join(os.path.dirname(__file__), "secrets-server.json")) as inf:
   secrets = json.loads(inf.read())
   slack_token = secrets["slack"]["token"]
   simplechat_token = secrets["simplechat"]["token"]

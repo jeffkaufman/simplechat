@@ -6,7 +6,7 @@ import urllib.request
 import textwrap
 import os
 
-with open(os.path.join(os.path.dirname(__file__), "secrets.json")) as inf:
+with open(os.path.join(os.path.dirname(__file__), "secrets-client.json")) as inf:
   secrets = json.loads(inf.read())
   hook = secrets["slack"]["hook"]
   simplechat_token = secrets["simplechat"]["token"]
