@@ -13,7 +13,7 @@ individual room from the command line.
 4. Select a workspace
 5. Select "JSON"
 6. Paste app manifest (with `Test` changed to the user's name):
-   ```
+ ```
 {
     "_metadata": {
         "major_version": 1,
@@ -55,7 +55,7 @@ individual room from the command line.
         "is_hosted": false
     }
 }
-   ```
+```
 7. Click "Create"
 8. Click "Install to Workspace"
 9. Give it a channel to post in
